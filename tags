@@ -1,0 +1,66 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+DP	ziggurat.f90	/^   INTEGER,  PARAMETER  ::  DP=/;"	v	module:Ziggurat
+L_box	PDE_solv.f90	/^real(kind=8) :: L_box,/;"	v	program:main
+N_cnf	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=/;"	v	program:main
+N_tot	PDE_solv.f90	/^integer :: i, i_z , j, N_tot,/;"	v	program:main
+PBC	PDE_solv.f90	/^logical :: conver = .False., PBC /;"	v	program:main
+Ziggurat	ziggurat.f90	/^MODULE Ziggurat$/;"	m
+conver	PDE_solv.f90	/^logical :: conver /;"	v	program:main
+dbg_count	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf, i_time, fnsh_time, obs_time, dbg_count /;"	v	program:main
+de	ziggurat.f90	/^                            q,                    de=/;"	v	module:Ziggurat
+dist_cnf	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, rho_tot, s_par, dist_cnf$/;"	v	program:main
+dn	ziggurat.f90	/^   REAL(DP)             ::  dn=/;"	v	module:Ziggurat
+dz	PDE_solv.f90	/^real(kind=8) :: L_box, eps, dz,/;"	v	program:main
+dz2	PDE_solv.f90	/^real(kind=8) :: L_box, eps, dz,dz2,/;"	v	program:main
+eps	PDE_solv.f90	/^real(kind=8) :: L_box, eps,/;"	v	program:main
+eval_conv	PDE_solv.f90	/^subroutine eval_conv(/;"	s
+fe	ziggurat.f90	/^   REAL(DP), SAVE       ::  wn(0:127), fn(0:127), we(0:255), fe(/;"	v	module:Ziggurat
+fn	ziggurat.f90	/^   REAL(DP), SAVE       ::  wn(0:127), fn(/;"	v	module:Ziggurat
+fnsh_time	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf, i_time, fnsh_time,/;"	v	program:main
+half	ziggurat.f90	/^   REAL(DP), PARAMETER  ::  m1=2147483648.0_DP,   m2=2147483648.0_DP,      &$/;"	v	module:Ziggurat
+hz	ziggurat.f90	/^                            ke(0:255), hz$/;"	v	module:Ziggurat
+i	PDE_solv.f90	/^in/;"	v	program:main
+i_cnf	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf,/;"	v	program:main
+i_time	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf, i_time,/;"	v	program:main
+i_z	PDE_solv.f90	/^integer :: i, i_z /;"	v	program:main
+init_guess	PDE_solv.f90	/^subroutine init_guess(/;"	s
+init_rand_seed	PDE_solv.f90	/^subroutine init_rand_seed(/;"	s
+initialized	ziggurat.f90	/^   LOGICAL,  SAVE       ::  initialized=/;"	v	module:Ziggurat
+iz	ziggurat.f90	/^   INTEGER,  SAVE       ::  iz,/;"	v	module:Ziggurat
+j	PDE_solv.f90	/^integer :: i, i_z , j,/;"	v	program:main
+jsr	ziggurat.f90	/^   INTEGER,  SAVE       ::  iz, jz, jsr=/;"	v	module:Ziggurat
+jz	ziggurat.f90	/^   INTEGER,  SAVE       ::  iz, jz,/;"	v	module:Ziggurat
+ke	ziggurat.f90	/^   INTEGER,  SAVE       ::  iz, jz, jsr=123456789, kn(0:127),              &$/;"	v	module:Ziggurat
+kn	ziggurat.f90	/^   INTEGER,  SAVE       ::  iz, jz, jsr=123456789, kn(/;"	v	module:Ziggurat
+m1	ziggurat.f90	/^   REAL(DP), PARAMETER  ::  m1=/;"	v	module:Ziggurat
+m2	ziggurat.f90	/^   REAL(DP), PARAMETER  ::  m1=2147483648.0_DP,   m2=/;"	v	module:Ziggurat
+main	PDE_solv.f90	/^program main$/;"	p
+model	PDE_solv.f90	/^character :: model /;"	v	program:main
+mu	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu,/;"	v	program:main
+obs_time	PDE_solv.f90	/^integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf, i_time, fnsh_time, obs_time,/;"	v	program:main
+observation	PDE_solv.f90	/^subroutine observation(/;"	s
+q	ziggurat.f90	/^                            vn=0.00991256303526217_DP,                     &$/;"	v	module:Ziggurat
+read_input	PDE_solv.f90	/^subroutine read_input(/;"	s
+rexp	ziggurat.f90	/^FUNCTION rexp(/;"	f	module:Ziggurat
+rho	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho,/;"	v	program:main
+rho_new	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho, rho_new,/;"	v	program:main
+rho_tot	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, rho_tot,/;"	v	program:main
+rnor	ziggurat.f90	/^FUNCTION rnor(/;"	f	module:Ziggurat
+s_par	PDE_solv.f90	/^real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, rho_tot, s_par,/;"	v	program:main
+shr3	ziggurat.f90	/^FUNCTION shr3(/;"	f	module:Ziggurat
+str_len	PDE_solv.f90	/^real(kind=8) :: L_box, eps, dz,dz2, str_len /;"	v	program:main
+te	ziggurat.f90	/^                            q,                    de=7.697117470131487_DP, &$/;"	v	module:Ziggurat
+tn	ziggurat.f90	/^   REAL(DP)             ::  dn=3.442619855899_DP, tn=/;"	v	module:Ziggurat
+uni	ziggurat.f90	/^FUNCTION uni(/;"	f	module:Ziggurat
+update	PDE_solv.f90	/^subroutine update(/;"	s
+ve	ziggurat.f90	/^                            te=7.697117470131487_DP,                       &$/;"	v	module:Ziggurat
+vn	ziggurat.f90	/^   REAL(DP)             ::  dn=3.442619855899_DP, tn=3.442619855899_DP,    &$/;"	v	module:Ziggurat
+we	ziggurat.f90	/^   REAL(DP), SAVE       ::  wn(0:127), fn(0:127), we(/;"	v	module:Ziggurat
+wn	ziggurat.f90	/^   REAL(DP), SAVE       ::  wn(/;"	v	module:Ziggurat
+write_rho	PDE_solv.f90	/^subroutine write_rho(/;"	s
+zigset	ziggurat.f90	/^SUBROUTINE zigset(/;"	s	module:Ziggurat
