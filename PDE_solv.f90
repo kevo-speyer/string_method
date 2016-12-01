@@ -2,9 +2,10 @@ program main
 use ziggurat
 implicit none
 character :: model !Update model A or B
-integer :: i, i_z , j, N_tot, N_cnf=20, i_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
-real(kind=8) :: L_box, eps, dz,dz2, str_len ! ,conv_eps !square of conv criteria
-real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, rho_tot, s_par, dist_cnf
+integer :: i, i_interval, i_z , j, N_tot, N_cnf=20, i_cnf, j_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
+real(kind=8) :: s_new, L_box, eps, dz,dz2, str_len ! ,conv_eps !square of conv criteria
+real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, s_par, dist_cnf
+real(kind=8) , dimension(:,:), allocatable :: poly_coeff, rho_tot
 !rho_tot is the matrix with all rho as a function of the string
 logical :: conver = .False., PBC = .True.! Converged to solution, Periodic
                                         !Boundary Condition True or False
@@ -14,6 +15,7 @@ call read_input(L_box,eps,N_tot,fnsh_time,obs_time, model, dz)
 dz2 = dz**2
 
 allocate(rho(N_tot),rho_new(N_tot), mu(N_tot), rho_tot(N_tot,N_cnf), s_par(N_cnf),dist_cnf(N_cnf-1))
+allocate(poly_coeff(4,N_cnf-1))
 
 !open files to save data
 open (unit = 73, file = "rho_vs_z.dat")
@@ -27,8 +29,8 @@ do i_cnf=1,N_cnf
         call init_guess(rho_tot(:,i_cnf),N_tot,2)   ! Last input is case:
     else                                            ! 1 is ramp.           
         call init_guess(rho_tot(:,i_cnf),N_tot,4)   ! 2 is random near mean value defined inside routine
-                                                    ! 3 is near equilibrium
-                                                    ! 4 is read config from file
+        !DEBUG                                            ! 3 is near equilibrium
+        print *,"Va Hasta aca!",i_cnf                                            ! 4 is read config from file
     end if
 end do
 
@@ -41,9 +43,9 @@ do i_time = 1, fnsh_time !while (.not.conver)
         call update(rho,rho_new,mu,N_tot,eps, dz2, PBC, model)
 
         !Meassure Free Energy, N_particles, F interface, etc .
-        !if ( mod(i_time,obs_time) .eq. 0 ) then
-        !    call observation(rho_new,mu,N_tot, L_box, i_time,dz,PBC)
-        !end if
+        if ( mod(i_time,obs_time) .eq. 0 ) then
+            call observation(rho_new,mu,N_tot, L_box, i_time,dz,PBC)
+        end if
         
         !Evaluate convergence !OLD
         !call eval_conv(rho,rho_new,N_tot,conver,conv_eps)    
@@ -71,7 +73,7 @@ do i_time = 1, fnsh_time !while (.not.conver)
     ! Get third order spline for each z0 f(s|z0) = rho(z0,s)
     ! from f(s|z0) get new rho(s*N_tot+1,z0)
     do i_z = 1, N_tot  ! loop over z positions
-        splines(s_par, rho_tot(i_z,:), N_cnf, poly_coeff) !splines for this z value
+        call splines(s_par, rho_tot(i_z,:), N_cnf, poly_coeff) !splines for this z value
         
         !get rho_tot(i_z,:) from splines
         do i_cnf = 1, N_cnf
@@ -86,10 +88,7 @@ do i_time = 1, fnsh_time !while (.not.conver)
             end do     
 
             !evaluate rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
-            rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) +
-            poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) +
-            poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 +
-            poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
+            rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
 
         end do !s_loop
    
@@ -359,7 +358,7 @@ subroutine splines(x_points, y_points, n_points, poly_coeff)
 implicit none
 integer, intent(in) :: n_points
 real(kind=8), dimension(n_points), intent(in) :: x_points,y_points
-real(kind=8), dimension(4,n_points), intent(out) :: poly_coeff
+real(kind=8), dimension(4,n_points-1), intent(out) :: poly_coeff
 integer :: i_point
 real(kind=8) :: dx
 

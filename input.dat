@@ -1,6 +1,6 @@
 50.           Half Length of simulation box    
 100           Half # grid points
 0.005        epsilon to update density (rho)
-1000        Time steps to simulate
-10         Steps between storage of data
+10        Time steps to simulate
+1         Steps between storage of data
 A            Intgegration model. Should be A or B
