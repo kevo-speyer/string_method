@@ -2,7 +2,7 @@ program main
 use ziggurat
 implicit none
 character :: model !Update model A or B
-integer :: i, i_interval, i_z , j, N_tot, N_cnf=20, i_cnf, j_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
+integer :: i, i_interval, i_z, j_z, j, N_tot, N_cnf=20, i_cnf, j_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
 real(kind=8) :: s_new, L_box, eps, dz,dz2, str_len ! ,conv_eps !square of conv criteria
 real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, s_par, dist_cnf
 real(kind=8) , dimension(:,:), allocatable :: poly_coeff, rho_tot
@@ -19,9 +19,11 @@ allocate(poly_coeff(4,N_cnf-1))
 
 !open files to save data
 open (unit = 73, file = "rho_vs_z.dat")
-open (unit = 74, file = "F_vs_time.dat")
+open (unit = 74, file = "F_vs_s.dat")
 open (unit = 75, file = "N_part_vs_time.dat")
 open (unit = 76, file = "Finterface_vs_time.dat")
+
+call init_rand_seed()
 
 !Make initial guess of rho for each point in string
 do i_cnf=1,N_cnf
@@ -29,10 +31,18 @@ do i_cnf=1,N_cnf
         call init_guess(rho_tot(:,i_cnf),N_tot,2)   ! Last input is case:
     else                                            ! 1 is ramp.           
         call init_guess(rho_tot(:,i_cnf),N_tot,4)   ! 2 is random near mean value defined inside routine
-        !DEBUG                                            ! 3 is near equilibrium
-        print *,"Va Hasta aca!",i_cnf                                            ! 4 is read config from file
+                                                    ! 3 is near equilibrium
+                                                    ! 4 is read config from file        
     end if
-end do
+    !DEBUG                                   
+    !print *,"Va Hasta aca!",i_cnf           
+    !do i_z = 1, N_tot
+    !    write(i_cnf+100,*) dz*float(i_z), rho_tot(i_z,i_cnf)   
+ 
+    !end do
+    !write(i_cnf+100,*)
+
+end do                                   
 
 print*, " Starting Iteratrive approach to Solution"
 
@@ -45,6 +55,10 @@ do i_time = 1, fnsh_time !while (.not.conver)
         !Meassure Free Energy, N_particles, F interface, etc .
         if ( mod(i_time,obs_time) .eq. 0 ) then
             call observation(rho_new,mu,N_tot, L_box, i_time,dz,PBC)
+            !do j_z = 1, N_tot
+            !    write(i_cnf+100,*) dz*float(j_z),rho_new(j_z)                   
+            !end do
+            !write(i_cnf+100,*) 
         end if
         
         !Evaluate convergence !OLD
@@ -58,34 +72,45 @@ do i_time = 1, fnsh_time !while (.not.conver)
     str_len = 0.
     do i_cnf = 1, N_cnf-1 ! loop over the string
         dist_cnf(i_cnf) = sqrt( sum( ( rho_tot(:,i_cnf+1) - rho_tot(:,i_cnf) )**2 ) )
-        if (dist_cnf(i_cnf).lt.10**-6) then
-            dist_cnf(i_cnf) = 10**-6
+        if ( dist_cnf(i_cnf) .le. 10E-6) then
+            dist_cnf(i_cnf) = 10E-6
         end if
+        !write(199,*) i_cnf,dist_cnf(i_cnf)
         str_len = str_len + dist_cnf(i_cnf)
     end do
+    !write(199,*) 
     
     !Calculate normalized distance between configurations
     s_par(1) = 0
     do i_cnf = 1, N_cnf-1 ! loop over the string
        s_par(i_cnf+1) = s_par(i_cnf) +  dist_cnf(i_cnf)  / str_len
+       !write(200,*) i_cnf,s_par(i_cnf)
     end do    
-
+    !write(200,*) i_cnf,s_par(i_cnf)
+    !write(200,*)
+    
+     
     ! Get third order spline for each z0 f(s|z0) = rho(z0,s)
     ! from f(s|z0) get new rho(s*N_tot+1,z0)
     do i_z = 1, N_tot  ! loop over z positions
-        call splines(s_par, rho_tot(i_z,:), N_cnf, poly_coeff) !splines for this z value
-        
+        call spline(s_par, rho_tot(i_z,:), N_cnf, poly_coeff) !splines for this z value
+         
         !get rho_tot(i_z,:) from splines
-        do i_cnf = 1, N_cnf
-            s_new = float(i_cnf) / float(N_cnf)
+        do i_cnf = 2, N_cnf-1
+            s_new = float(i_cnf-1) / float(N_cnf-1)
 
             !find i_interval for this s_new value
             do j_cnf = 1, N_cnf-1
-                if( ( s_new.gt.s_par(j_cnf) ) .and. (s_new.le.s_par(j_cnf+1))) then
+                if( ( s_new.ge.s_par(j_cnf) ) .and. (s_new.le.s_par(j_cnf+1))) then
                     i_interval = j_cnf
                     exit !get out of loop
                 end if
-            end do     
+            end do
+             
+            !!DEBUG     
+            !print*,"s_new",s_new
+            !print*,"s_par(j_cnf), i_interval, s_par(j_cnf+1)",s_par(j_cnf),s_new, s_par(j_cnf+1)
+            !print*,"" 
 
             !evaluate rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
             rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
@@ -100,6 +125,9 @@ end do !time loop
 !Save result
 call write_rho(rho, N_tot, L_box)
 
+call write_results(rho_tot, N_tot, L_box, N_cnf)
+!
+
 !Close file with rho vs L
 close (73)
 close (74)
@@ -109,6 +137,48 @@ close (76)
 print*, " Done!"
 
 end program
+
+subroutine write_results(rho_tot, N_tot, L_box, N_cnf)
+implicit none
+integer, intent(in) :: N_tot, N_cnf
+real(kind=8),intent(in) :: rho_tot(N_tot,N_cnf), L_box
+integer :: i_z, i_cnf
+real(kind=8) :: Free_Energy(N_cnf), D_rho(N_cnf), dz 
+
+dz = (2*L_box) / float(N_tot)
+
+!Save Free Energy
+Free_Energy(:) = 0.
+do i_cnf = 1, N_cnf
+    do i_z =1 ,N_tot-1
+        D_rho(i_cnf) = ( rho_tot(i_z+1,i_cnf) - rho_tot(i_z,i_cnf) ) / dz
+        Free_Energy(i_cnf) =  Free_Energy(i_cnf) - rho_tot(i_z,i_cnf)**2 + .5*rho_tot(i_z,i_cnf)**4 + D_rho(i_cnf)**2
+    end do
+
+    !Account for PBC
+!    if(PBC) then
+        D_rho(i_cnf) = ( rho_tot(1,i_cnf) - rho_tot(N_tot,i_cnf) ) / dz
+     
+        Free_Energy(i_cnf) =  Free_Energy(i_cnf) - rho_tot(N_tot,i_cnf)**2 + .5*rho_tot(N_tot,i_cnf)**4 + D_rho(i_cnf)**2
+!    end if
+    Free_Energy(i_cnf) = .5 * Free_Energy(i_cnf) * dz
+end do
+
+open(unit = 60, file = "F_vs_s.dat", status= "unknown")
+
+do i_cnf = 1, N_cnf
+    write(60,*) float(i_cnf-1)/float(N_cnf-1),Free_Energy(i_cnf)
+end do
+
+!Save last configurations
+
+do i_cnf = 1, N_cnf
+    do i_z = 1, N_tot
+    write(100+i_cnf,*) float(i_z-1)*dz-L_box,rho_tot(i_z,i_cnf) 
+    end do
+end do
+
+end subroutine write_results
 
 subroutine observation(rho,mu,N_tot, L_box, i_time,dz,PBC)
 real(kind=8) , dimension(N_tot), intent(in) :: rho, mu
@@ -210,7 +280,9 @@ case(1) ! rho initiates as linear function
     rho(N_tot) = 1.
   
 case(2) ! rho initiates randomly around mean
-    call init_rand_seed()
+    amp=.05
+        mean = -0.8
+
     do i=1, N_tot
          rho(i) = amp*rnor()
     end do
@@ -241,7 +313,7 @@ case(4) ! read rho from file
     close(89)
 
 end select
-print*, " Initial Guess done"
+!print*, " Initial Guess done"
 
 end subroutine
 
@@ -381,3 +453,105 @@ do i_point = 2, n_points - 1
     poly_coeff(4,i_point) = (y_points(i_point+1) - poly_coeff(1,i_point) - poly_coeff(2,i_point)*dx - poly_coeff(3,i_point)*dx**2)/dx**3
 end do
 end subroutine splines
+
+
+
+subroutine spline (x, y, n, poly_coeff)
+    !======================================================================
+    !  Calculate the coefficients b(i), c(i), and d(i), i=1,2,...,n
+    !  for cubic spline interpolation
+    !  s(x) = y(i) + b(i)*(x-x(i)) + c(i)*(x-x(i))**2 + d(i)*(x-x(i))**3
+    !  for  x(i) <= x <= x(i+1)
+    !  Alex G: January 2010
+    !----------------------------------------------------------------------
+    !  input..
+    !  x = the arrays of data abscissas (in strictly increasing order)
+    !  y = the arrays of data ordinates
+    !  n = size of the arrays xi() and yi() (n>=2)
+    !  output..
+    !  b, c, d  = arrays of spline coefficients
+    !  comments ...
+    !  spline.f90 program is based on fortran version of program spline.f
+    !  the accompanying function fspline can be used for interpolation
+    !======================================================================
+    implicit none
+    integer, intent(in) :: n
+    real(kind=8), intent(in) :: x(n), y(n)
+    real(kind=8) :: b(n), c(n), d(n)
+    integer :: i, j, gap
+    real(kind=8) ::  h
+
+    !Add by Kevo
+    real(kind=8), dimension(4,n-1), intent(out) :: poly_coeff
+
+    gap = n-1
+    ! check input
+    if ( n < 2 ) return
+    if ( n < 3 ) then
+    b(1) = (y(2)-y(1))/(x(2)-x(1))   ! linear interpolation
+    c(1) = 0.
+    d(1) = 0.
+b(2) = b(1)
+    c(2) = 0.
+    d(2) = 0.
+    return
+    end if
+    !
+    ! step 1: preparation
+    !
+    d(1) = x(2) - x(1)
+c(2) = (y(2) - y(1))/d(1)
+    do i = 2, gap
+    d(i) = x(i+1) - x(i)
+    b(i) = 2.0*(d(i-1) + d(i))
+    c(i+1) = (y(i+1) - y(i))/d(i)
+c(i) = c(i+1) - c(i)
+    end do
+    !
+    ! step 2: end conditions 
+    !
+    b(1) = -d(1)
+b(n) = -d(n-1)
+    c(1) = 0.0
+    c(n) = 0.0
+    if(n /= 3) then
+    c(1) = c(3)/(x(4)-x(2)) - c(2)/(x(3)-x(1))
+    c(n) = c(n-1)/(x(n)-x(n-2)) - c(n-2)/(x(n-1)-x(n-3))
+    c(1) = c(1)*d(1)**2/(x(4)-x(1))
+c(n) = -c(n)*d(n-1)**2/(x(n)-x(n-3))
+    end if
+    !
+    ! step 3: forward elimination 
+    !
+    do i = 2, n
+    h = d(i-1)/b(i-1)
+    b(i) = b(i) - h*d(i-1)
+c(i) = c(i) - h*c(i-1)
+    end do
+    !
+    ! step 4: back substitution
+    !
+c(n) = c(n)/b(n)
+    do j = 1, gap
+    i = n-j
+c(i) = (c(i) - d(i)*c(i+1))/b(i)
+    end do
+    !
+    ! step 5: compute spline coefficients
+    !
+b(n) = (y(n) - y(gap))/d(gap) + d(gap)*(c(gap) + 2.0*c(n))
+    do i = 1, gap
+    b(i) = (y(i+1) - y(i))/d(i) - d(i)*(c(i+1) + 2.0*c(i))
+    d(i) = (c(i+1) - c(i))/d(i)
+c(i) = 3.*c(i)
+    end do
+    c(n) = 3.0*c(n)
+d(n) = d(n-1)
+
+!Get all coefficients in one matrix! Add by Kevo
+poly_coeff(1,1:n-1) = y(1:n-1)
+poly_coeff(2,1:n-1) = b(1:n-1)
+poly_coeff(3,1:n-1) = c(1:n-1)
+poly_coeff(4,1:n-1) = d(1:n-1)
+    end subroutine spline
+
