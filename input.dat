@@ -1,6 +1,8 @@
-50.           Half Length of simulation box    
-100           Half # grid points
-0.005        epsilon to update density (rho)
-100000 Time steps to simulate 
-5000         Steps between storage of data
+100.           Length of simulation box    
+300           # grid points
+0.002        epsilon to update density (rho)
+6000      Time steps to simulate 
+50000         Steps between storage of data
 A            Intgegration model. Should be A or B
+40      N_cnf Number of points along string parameter s
+-0.8    mean_rho To mantain constant the number of particles

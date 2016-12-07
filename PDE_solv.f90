@@ -2,20 +2,20 @@ program main
 use ziggurat
 implicit none
 character :: model !Update model A or B
-integer :: i, i_interval, i_z, j_z, j, N_tot, N_cnf=20, i_cnf, j_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
-real(kind=8) :: s_new, L_box, eps, dz,dz2, str_len ! ,conv_eps !square of conv criteria
+integer :: i, i_interval, i_z, j_z, j, N_tot, N_cnf, i_cnf, j_cnf, i_time, fnsh_time, obs_time, dbg_count = 1
+real(kind=8) :: mean_rho, dot_prod, s_new, L_box, eps, dz,dz2, str_len ! ,conv_eps !square of conv criteria
 real(kind=8) , dimension(:), allocatable :: rho, rho_new, mu, s_par, dist_cnf
-real(kind=8) , dimension(:,:), allocatable :: poly_coeff, rho_tot
+real(kind=8) , dimension(:,:), allocatable :: tang, poly_coeff, rho_tot, mu_tot, mu_perp
 !rho_tot is the matrix with all rho as a function of the string
 logical :: conver = .False., PBC = .True.! Converged to solution, Periodic
                                         !Boundary Condition True or False
 
 !Read input
-call read_input(L_box,eps,N_tot,fnsh_time,obs_time, model, dz)
+call read_input(L_box,eps,N_tot,fnsh_time,obs_time, model, dz, N_cnf, mean_rho)
 dz2 = dz**2
 
 allocate(rho(N_tot),rho_new(N_tot), mu(N_tot), rho_tot(N_tot,N_cnf), s_par(N_cnf),dist_cnf(N_cnf-1))
-allocate(poly_coeff(4,N_cnf-1))
+allocate(poly_coeff(4,N_cnf-1),mu_tot(N_tot,N_cnf),mu_perp(N_tot,N_cnf),tang(N_tot,N_cnf))
 
 !open files to save data
 open (unit = 73, file = "rho_vs_z.dat")
@@ -30,7 +30,7 @@ do i_cnf=1,N_cnf
     if(i_cnf.le.N_cnf/2) then
         call init_guess(rho_tot(:,i_cnf),N_tot,2)   ! Last input is case:
     else                                            ! 1 is ramp.           
-        call init_guess(rho_tot(:,i_cnf),N_tot,4)   ! 2 is random near mean value defined inside routine
+        call init_guess(rho_tot(:,i_cnf),N_tot,3)   ! 2 is random near mean value defined inside routine
                                                     ! 3 is near equilibrium
                                                     ! 4 is read config from file        
     end if
@@ -49,6 +49,7 @@ print*, " Starting Iteratrive approach to Solution"
 do i_time = 1, fnsh_time !while (.not.conver)
     do i_cnf = 1, N_cnf ! loop over the string
         rho(:) = rho_tot(:,i_cnf)
+        mu(:) = mu_tot(:,i_cnf)
         !Update solution to diffretian equation
         call update(rho,rho_new,mu,N_tot,eps, dz2, PBC, model)
 
@@ -66,6 +67,7 @@ do i_time = 1, fnsh_time !while (.not.conver)
 
         ! move New to old variables
         rho_tot(:,i_cnf) = rho_new(:)
+        mu_tot(:,i_cnf) = mu(:)
     end do
      
     !Calculate Distances between  rho(:,i) and  rho(:,i+1)
@@ -115,10 +117,28 @@ do i_time = 1, fnsh_time !while (.not.conver)
             !evaluate rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
             rho_tot(i_z,i_cnf) = poly_coeff(1,i_interval) + poly_coeff(2,i_interval) * (s_new-s_par(i_interval)) + poly_coeff(3,i_interval) * (s_new-s_par(i_interval))**2 + poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**3
 
+            ! Get tangent vector tang(i_z,i_cnf) = d (rho_tot) / ds
+            tang(i_z,i_cnf) = poly_coeff(2,i_interval) + 2. * poly_coeff(3,i_interval) * (s_new-s_par(i_interval)) + 3. * poly_coeff(4,i_interval) * (s_new-s_par(i_interval))**2
+
+            
         end do !s_loop
    
     end do!i_z loop
 
+    !!Check that the number of particles remains constant i.e. sum ( m(z) ) = cte
+    do i_cnf = 1, N_cnf   
+        rho_tot(:,i_cnf) = rho_tot(:,i_cnf) - sum( rho_tot(:,i_cnf) ) / float(N_tot) + mean_rho
+    end do   
+
+    !Get mu_perp 
+    do i_cnf=2, N_cnf-1
+        dot_prod = sum( tang(:,i_cnf) * mu_tot(:,i_cnf)  ) / sum(tang(:,i_cnf)**2 )
+        do i_z=1, N_tot
+            mu_perp(i_z,i_cnf) = mu_tot(i_z,i_cnf) - dot_prod * tang(i_z,i_cnf)
+        end do
+    end do
+    
+    write(305,*) i_time, maxval(  mu_perp(:,:) )
 end do !time loop
 
 
@@ -145,7 +165,7 @@ real(kind=8),intent(in) :: rho_tot(N_tot,N_cnf), L_box
 integer :: i_z, i_cnf
 real(kind=8) :: Free_Energy(N_cnf), D_rho(N_cnf), dz 
 
-dz = (2*L_box) / float(N_tot)
+dz = L_box / float(N_tot )
 
 !Save Free Energy
 Free_Energy(:) = 0.
@@ -174,7 +194,7 @@ end do
 
 do i_cnf = 1, N_cnf
     do i_z = 1, N_tot
-    write(100+i_cnf,*) float(i_z-1)*dz-L_box,rho_tot(i_z,i_cnf) 
+    write(100+i_cnf,*) float(i_z-1)*dz,rho_tot(i_z,i_cnf) 
     end do
 end do
 
@@ -232,7 +252,7 @@ real(kind=8), intent(in) :: L_box
 integer :: i
 
 do i = 1, N_tot
-    z = float((i-1))/float((N_tot-1))*2.*L_box - L_box
+    z = float(i-1)/float(N_tot-1)*L_box 
     write(73,*) z, rho(i)
 end do
 
@@ -394,10 +414,10 @@ end select
 
 end subroutine
 
-subroutine read_input(L, eps, N_steps, fnsh_time, obs_time,model, dz)
-real(kind=8), intent(out) :: L, eps, dz
+subroutine read_input(L, eps, N_steps, fnsh_time, obs_time,model, dz, N_cnf, mean_rho)
+real(kind=8), intent(out) :: L, eps, dz, mean_rho
 character, intent(out) :: model
-integer, intent(out) :: N_steps, fnsh_time,obs_time
+integer, intent(out) :: N_steps, fnsh_time, obs_time, N_cnf
 open (unit = 53, file = "input.dat", status= "old")
 
 read(53,*) L
@@ -406,6 +426,9 @@ read(53,*) eps
 read(53,*) fnsh_time
 read(53,*) obs_time
 read(53,*) model
+read(53,*) N_cnf
+read(53,*) mean_rho
+
 close(53)
 
 if((model.ne."A") .and. (model.ne."B")) then
@@ -417,7 +440,7 @@ end if
 print*, " Reading done"
 dz = L / float(N_steps) ! Bin size
 
-N_steps = N_steps * 2 + 1! Total # of steps is double of input
+!N_steps = N_steps * 2 + 1! Total # of steps is double of input
 !print*,"L,N_steps,eps,fnsh_time,obs_time"
 !print*,L,N_steps,eps,fnsh_time,obs_time
 end subroutine
